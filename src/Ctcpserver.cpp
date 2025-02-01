@@ -1,11 +1,14 @@
 #include "../include/Ctcpserver.h"
 
 #include <arpa/inet.h>
+#include <bits/types/struct_timeval.h>
 
-Ctcpserver::Ctcpserver() : serverfd(-1) {}
+#include <iostream>
+
+Ctcpserver::Ctcpserver() : listenfd(-1) { FD_ZERO(&readfds); }
 
 bool Ctcpserver::init_server(const unsigned short _port) {
-  if ((serverfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) return false;
+  if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) return false;
   port = _port;
 
   struct sockaddr_in servaddr;
@@ -14,48 +17,87 @@ bool Ctcpserver::init_server(const unsigned short _port) {
   servaddr.sin_port = htons(port);
   servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-  if (::bind(serverfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) == -1) {
-    ::close(serverfd);
-    serverfd = -1;
+  if (::bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) == -1) {
+    ::close(listenfd);
+    listenfd = -1;
     return false;
   }
 
-  if (::listen(serverfd, 5) == -1) {
-    ::close(serverfd);
-    serverfd = -1;
+  if (::listen(listenfd, 5) == -1) {
+    ::close(listenfd);
+    listenfd = -1;
     return false;
   }
+
+  FD_SET(listenfd, &readfds);
+  maxfd = listenfd;
 
   return true;
 }
 
-bool Ctcpserver::accept() {
+int Ctcpserver::accept() {
   struct sockaddr_in caddr;
   socklen_t addrlen = sizeof(caddr);
-  if ((sock = ::accept(serverfd, (struct sockaddr*)&caddr, &addrlen)) == -1)
-    return false;
-  ip = inet_ntoa(caddr.sin_addr);
-  return true;
-}
-const std::string& Ctcpserver::client_ip() const { return ip; }
-
-bool Ctcpserver::close_client() {
-  if (sock == -1) return false;
-
-  ::close(sock);
-  sock = -1;
-  return true;
+  return ::accept(listenfd, (struct sockaddr*)&caddr, &addrlen);
 }
 
 bool Ctcpserver::close_listen() {
-  if (serverfd == -1) return false;
+  if (listenfd == -1) return false;
 
-  ::close(serverfd);
-  serverfd = -1;
+  ::close(listenfd);
+  listenfd = -1;
   return true;
 }
 
-Ctcpserver::~Ctcpserver() {
-  close_client();
-  close_listen();
+bool Ctcpserver::select() {
+  struct timeval timeout;
+  timeout.tv_sec = 10;
+  timeout.tv_usec = 0;
+
+  fd_set tmpfds = readfds;
+  int fds = ::select(maxfd + 1, &tmpfds, 0, 0, 0);
+  if (fds < 0) {
+    std::cerr << "select() failed\n";
+    return false;
+  }
+  if (fds == 0) {
+    std::cerr << "select() timeout\n";
+    return false;
+  }
+
+  std::string buffer;
+  for (int eventfd = 0; eventfd <= maxfd; eventfd++) {
+    if (FD_ISSET(eventfd, &tmpfds) == 0) continue;
+    if (eventfd == listenfd) {
+      int clientsock = accept();
+      if (clientsock == -1) {
+        std::cerr << "accept() failed\n";
+        continue;
+      }
+      std::cout << "accept client: " << eventfd << std::endl;
+      FD_SET(clientsock, &readfds);
+      if (maxfd < clientsock) maxfd = clientsock;
+      continue;
+    }
+    if (!recv(eventfd, buffer, 1024)) {
+      std::cout << "client(eventfd=" << eventfd << ")disconnected" << std::endl;
+      ::close(eventfd);
+      FD_CLR(eventfd, &readfds);
+      if (eventfd == maxfd) {
+        for (int i = maxfd; i > 0; i--) {
+          if (FD_ISSET(i, &readfds)) {
+            maxfd = i;
+            break;
+          }
+        }
+      }
+      continue;
+    }
+    std::cout << "recv(eventfd=" << eventfd << "): " << buffer << std::endl;
+    buffer = "ok";
+    send(eventfd, buffer);
+  }
+  return true;
 }
+
+Ctcpserver::~Ctcpserver() { close_listen(); }

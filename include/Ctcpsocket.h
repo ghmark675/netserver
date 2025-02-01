@@ -11,16 +11,8 @@
 
 class Ctcpsocket {
  public:
-  Ctcpsocket();
-  bool send(const std::string &buffer);
-  bool recv(std::string &buffer, const size_t maxlen);
-  bool close();
-  ~Ctcpsocket();
-
- protected:
-  int sock;
-  unsigned short port;
-  std::string ip;
+  bool send(const int sockfd, const std::string &buffer);
+  bool recv(const int sockfd, std::string &buffer, const size_t maxlen);
 };
 
 #endif

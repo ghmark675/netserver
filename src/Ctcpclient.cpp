@@ -1,8 +1,17 @@
 #include "../include/Ctcpclient.h"
 
+Ctcpclient::Ctcpclient() : sock(-1) {}
+
+bool Ctcpclient::send(const std::string &buffer) {
+  return Ctcpsocket::send(sock, buffer);
+}
+
+bool Ctcpclient::recv(std::string &buffer, const size_t maxlen) {
+  return Ctcpsocket::recv(sock, buffer, maxlen);
+}
+
 bool Ctcpclient::connect(const std::string &_ip, const unsigned short _port) {
   if (sock != -1) return false;
-  ip = _ip;
   port = _port;
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) return false;
@@ -13,7 +22,7 @@ bool Ctcpclient::connect(const std::string &_ip, const unsigned short _port) {
   servaddr.sin_port = htons(port);
 
   struct hostent *h;
-  if ((h = gethostbyname(ip.c_str())) == nullptr) {
+  if ((h = gethostbyname(_ip.c_str())) == nullptr) {
     ::close(sock);
     sock = -1;
     return false;
@@ -27,4 +36,8 @@ bool Ctcpclient::connect(const std::string &_ip, const unsigned short _port) {
   }
 
   return true;
+}
+
+Ctcpclient::~Ctcpclient() {
+  if (sock != -1) close(sock);
 }
