@@ -73,23 +73,39 @@ void server(const unsigned short port) {
     return;
   }
 
-  if (!server.accept()) {
-    std::cerr << "accept()\n";
-    return;
-  }
-  std::cout << "client " << server.client_ip() << " is connected" << std::endl;
-  std::string buffer;
   while (true) {
-    if (!server.recv(buffer, 1024)) {
-      std::cerr << "recv()\n";
-      break;
+    if (!server.accept()) {
+      std::cerr << "accept()\n";
+      return;
     }
-    std::cout << "recv: " << buffer << std::endl;
-    buffer = "ok";
-    if (!server.send(buffer)) {
-      std::cerr << "send\n";
-      break;
+    int pid = fork();
+    if (pid == -1) {
+      std::cerr << "fork() error\n";
+      return;
     }
-    std::cout << "send: " << buffer << std::endl;
+    if (pid > 0) {
+      // 父进程，只监听+连接，不用与客户端交互
+      server.close_client();
+      continue;
+    }
+    // 子进程只负责与客户端交互，不负责监听+连接
+    server.close_listen();
+    std::cout << "client " << server.client_ip() << " is connected"
+              << std::endl;
+    std::string buffer;
+    while (true) {
+      if (!server.recv(buffer, 1024)) {
+        std::cerr << "recv()\n";
+        break;
+      }
+      std::cout << "recv " << buffer << std::endl;
+      buffer = "ok";
+      if (!server.send(buffer)) {
+        std::cerr << "send\n";
+        break;
+      }
+      std::cout << "Send " << buffer << '\n';
+    }
+    return;
   }
 }
