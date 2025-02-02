@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "../include/Ctcpclient.h"
+#include "../include/Epoll.h"
 #include "../include/Socket.h"
 
 void print_tutorial() {
@@ -75,66 +76,51 @@ void server(const unsigned short port) {
   servsock.bind(servaddr);
   servsock.listen();
 
-  int epollfd = epoll_create(1);
-
-  epoll_event ev;
-  ev.data.fd = servsock.fd();
-  ev.events = EPOLLIN;
-  epoll_ctl(epollfd, EPOLL_CTL_ADD, servsock.fd(), &ev);
-  epoll_event evs[10];
+  Epoll ep;
+  ep.addfd(servsock.fd(), EPOLLIN);
+  std::vector<epoll_event> evs;
 
   while (true) {
-    int fds = epoll_wait(epollfd, evs, 10, -1);
-    if (fds < 0) {
-      perror("epoll_wait() failed");
-      break;
-    }
-    if (fds == 0) {
-      perror("epoll_wait() timeout");
-      continue;
-    }
-
-    for (int i = 0; i < fds; i++) {
-      if (evs[i].events & EPOLLRDHUP) {
-        std::cout << "disconnected: " << evs[i].data.fd << std::endl;
-        ::close(evs[i].data.fd);
+    evs = ep.loop();
+    for (auto &ev : evs) {
+      if (ev.events & EPOLLRDHUP) {
+        std::cout << "disconnected: " << ev.data.fd << std::endl;
+        ::close(ev.data.fd);
         continue;
       }
-      if (evs[i].events & (EPOLLIN | EPOLLPRI)) {  // 接收缓冲区有数据可以读
-        if (evs[i].data.fd == servsock.fd()) {
+      if (ev.events & (EPOLLIN | EPOLLPRI)) {  // 接收缓冲区有数据可以读
+        if (ev.data.fd == servsock.fd()) {
           InetAddress clientaddr;
           Socket *clientsock = new Socket(servsock.accept(clientaddr));
           std::cout << "accept client(fd=" << clientsock->fd()
                     << ",ip=" << clientaddr.ip()
                     << ",port=" << clientaddr.port() << ")" << std::endl;
-          ev.data.fd = clientsock->fd();
-          ev.events = EPOLLIN | EPOLLET;
-          epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock->fd(), &ev);
+          ep.addfd(clientsock->fd(), EPOLLIN | EPOLLET);
         } else {
           char buffer[1024];
           while (true) {
             bzero(&buffer, sizeof(buffer));
-            ssize_t nread = read(evs[i].data.fd, buffer, sizeof(buffer));
+            ssize_t nread = read(ev.data.fd, buffer, sizeof(buffer));
             if (nread > 0) {
-              std::cout << "recv from " << evs[i].data.fd << ": " << buffer
+              std::cout << "recv from " << ev.data.fd << ": " << buffer
                         << std::endl;
-              ::send(evs[i].data.fd, buffer, strlen(buffer), 0);
+              ::send(ev.data.fd, buffer, strlen(buffer), 0);
               continue;
             }
             if (nread == -1 && errno == EINTR) continue;
             if (nread == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
               break;
             if (nread == 0) {
-              std::cout << "disconnected: " << evs[i].data.fd << std::endl;
+              std::cout << "disconnected: " << ev.data.fd << std::endl;
               break;
             }
           }
         }
         continue;
       }
-      if (evs[i].events & EPOLLOUT) continue;
-      std::cerr << "error " << evs[i].data.fd << '\n';
-      ::close(evs[i].data.fd);
+      if (ev.events & EPOLLOUT) continue;
+      std::cerr << "error " << ev.data.fd << '\n';
+      ::close(ev.data.fd);
     }
   }
 }
