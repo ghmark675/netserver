@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "../include/Channel.h"
 #include "../include/Ctcpclient.h"
 #include "../include/Epoll.h"
 #include "../include/Socket.h"
@@ -77,50 +78,13 @@ void server(const unsigned short port) {
   servsock.listen();
 
   Epoll ep;
-  ep.addfd(servsock.fd(), EPOLLIN);
-  std::vector<epoll_event> evs;
+  Channel *servchannel = new Channel(&ep, servsock.fd(), true);
+  servchannel->enable_reading();
 
   while (true) {
-    evs = ep.loop();
-    for (auto &ev : evs) {
-      if (ev.events & EPOLLRDHUP) {
-        std::cout << "disconnected: " << ev.data.fd << std::endl;
-        ::close(ev.data.fd);
-        continue;
-      }
-      if (ev.events & (EPOLLIN | EPOLLPRI)) {  // 接收缓冲区有数据可以读
-        if (ev.data.fd == servsock.fd()) {
-          InetAddress clientaddr;
-          Socket *clientsock = new Socket(servsock.accept(clientaddr));
-          std::cout << "accept client(fd=" << clientsock->fd()
-                    << ",ip=" << clientaddr.ip()
-                    << ",port=" << clientaddr.port() << ")" << std::endl;
-          ep.addfd(clientsock->fd(), EPOLLIN | EPOLLET);
-        } else {
-          char buffer[1024];
-          while (true) {
-            bzero(&buffer, sizeof(buffer));
-            ssize_t nread = read(ev.data.fd, buffer, sizeof(buffer));
-            if (nread > 0) {
-              std::cout << "recv from " << ev.data.fd << ": " << buffer
-                        << std::endl;
-              ::send(ev.data.fd, buffer, strlen(buffer), 0);
-              continue;
-            }
-            if (nread == -1 && errno == EINTR) continue;
-            if (nread == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
-              break;
-            if (nread == 0) {
-              std::cout << "disconnected: " << ev.data.fd << std::endl;
-              break;
-            }
-          }
-        }
-        continue;
-      }
-      if (ev.events & EPOLLOUT) continue;
-      std::cerr << "error " << ev.data.fd << '\n';
-      ::close(ev.data.fd);
+    std::vector<Channel *> channels = ep.loop();
+    for (auto &ch : channels) {
+      ch->handle_event(&servsock);
     }
   }
 }

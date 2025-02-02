@@ -8,7 +8,10 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <vector>
+
+class Channel;
 
 class Epoll {
  private:
@@ -20,8 +23,9 @@ class Epoll {
   Epoll();
   ~Epoll();
 
-  void addfd(int fd, uint32_t op);
-  std::vector<epoll_event> loop(int timeout = -1);
+  // void addfd(int fd, uint32_t op);
+  void update_channel(Channel *ch);
+  std::vector<Channel *> loop(int timeout = -1);
 };
 
 #endif
