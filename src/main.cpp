@@ -1,11 +1,15 @@
+#include <sys/epoll.h>
+
 #include <iostream>
 
+#include "../include/Channel.h"
 #include "../include/Ctcpclient.h"
-#include "../include/Ctcpserver.h"
+#include "../include/Epoll.h"
+#include "../include/Socket.h"
 
 void print_tutorial() {
   std::cerr << "client: ./main -c 127.0.0.1 5005\n";
-  std::cerr << "server: ./main -s 5005\n";
+  std::cerr << "server: ./main -s <ip_addr> <port>\n";
 }
 
 void client(const std::string &ip, const unsigned short port);
@@ -64,15 +68,23 @@ void client(const std::string &ip, const unsigned short port) {
 }
 
 void server(const unsigned short port) {
-  Ctcpserver server;
-  if (!server.init_server(port)) {
-    std::cerr << "init_server() error\n";
-    return;
-  }
+  Socket servsock(createnonblocking());
+  InetAddress servaddr(port);
+  servsock.setreuseport(true);
+  servsock.settcpnodelay(true);
+  servsock.setkeepalive(true);
+  servsock.setreuseport(true);
+  servsock.bind(servaddr);
+  servsock.listen();
 
-  std::cout << "server init done!" << std::endl;
+  Epoll ep;
+  Channel *servchannel = new Channel(&ep, servsock.fd(), true);
+  servchannel->enable_reading();
 
   while (true) {
-    server.epoll();
+    std::vector<Channel *> channels = ep.loop();
+    for (auto &ch : channels) {
+      ch->handle_event(&servsock);
+    }
   }
 }

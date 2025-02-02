@@ -32,12 +32,12 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 # 快捷目标：启动服务器
 server: all
 	@echo "Starting server on port 5005..."
-	@./bin/app -s 5005
+	@./bin/app -s 182.92.104.14 5005
 
 # 快捷目标：启动客户端
 client: all
 	@echo "Starting client connecting to 127.0.0.1:5005..."
-	@./bin/app -c 127.0.0.1 5005
+	@./bin/app -c 182.92.104.14 5005
 
 # 创建必要目录
 create-dirs:
