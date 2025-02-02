@@ -78,13 +78,15 @@ void server(const unsigned short port) {
   servsock.listen();
 
   Epoll ep;
-  Channel *servchannel = new Channel(&ep, servsock.fd(), true);
+  Channel *servchannel = new Channel(&ep, servsock.fd());
+  servchannel->set_readcallback(
+      std::bind(&Channel::newconnection, servchannel, &servsock));
   servchannel->enable_reading();
 
   while (true) {
     std::vector<Channel *> channels = ep.loop();
     for (auto &ch : channels) {
-      ch->handle_event(&servsock);
+      ch->handle_event();
     }
   }
 }

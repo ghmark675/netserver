@@ -3,6 +3,8 @@
 
 #include <sys/epoll.h>
 
+#include <functional>
+
 class Epoll;
 class Socket;
 
@@ -13,10 +15,10 @@ class Channel {
   bool inepoll_ = false;
   uint32_t events_ = 0;
   uint32_t revents_ = 0;
-  bool is_listen_ = false;
+  std::function<void()> readcallback_;
 
  public:
-  Channel(Epoll *ep, int fd, bool is_listen);
+  Channel(Epoll *ep, int fd);
   ~Channel();
 
   int fd();
@@ -28,7 +30,11 @@ class Channel {
   uint32_t events();
   uint32_t revents();
 
-  void handle_event(Socket *servsock);
+  void handle_event();
+
+  void newconnection(Socket *servsock);
+  void onmessage();
+  void set_readcallback(std::function<void()> fn);
 };
 
 #endif
