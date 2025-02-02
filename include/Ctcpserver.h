@@ -16,7 +16,6 @@ class Ctcpserver : public Ctcpsocket {
   bool close_listen();
   bool select();
   bool epoll();
-  void print_info(const std::string &pre, int fd, const std::string &suf = "");
   ~Ctcpserver();
 
  protected:

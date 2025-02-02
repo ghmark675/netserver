@@ -7,8 +7,9 @@
 #include <sys/socket.h>
 
 #include <cerrno>
-#include <iomanip>
 #include <iostream>
+
+#include "../include/InetAddress.h"
 
 Ctcpserver::Ctcpserver() : listenfd(-1) { FD_ZERO(&readfds); }
 
@@ -28,13 +29,14 @@ bool Ctcpserver::init_server(const unsigned short _port) {
       listenfd, SOL_SOCKET, SO_KEEPALIVE, &opt,
       static_cast<socklen_t>(sizeof opt));  // 可能有用，但是，建议自己做心跳。
 
-  struct sockaddr_in servaddr;
-  memset(&servaddr, 0, sizeof(servaddr));
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_port = htons(port);
-  servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  // struct sockaddr_in servaddr;
+  // memset(&servaddr, 0, sizeof(servaddr));
+  // servaddr.sin_family = AF_INET;
+  // servaddr.sin_port = htons(port);
+  // servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  InetAddress servaddr(port);
 
-  if (::bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1) {
+  if (::bind(listenfd, servaddr.addr(), sizeof(sockaddr)) == -1) {
     ::close(listenfd);
     listenfd = -1;
     return false;
@@ -73,22 +75,6 @@ bool Ctcpserver::close_listen() {
   return true;
 }
 
-void Ctcpserver::print_info(const std::string &pre, int fd,
-                            const std::string &suf) {
-  sockaddr_in addr;
-  socklen_t addr_len = sizeof(addr);
-  int res = getpeername(fd, (sockaddr *)&addr, &addr_len);
-  std::string client_info =
-      "client(fd=" + std::to_string(fd) + ",ip=" + inet_ntoa(addr.sin_addr) +
-      ",port=" + std::to_string(ntohs(addr.sin_port)) + ") ";
-  if (res == 0) {
-    std::cout << std::left << std::setw(15) << pre << std::left << std::setw(45)
-              << client_info << std::left << std::setw(10) << suf << std::endl;
-  } else {
-    std::cerr << "in print_info(), getpeername() failed\n";
-  }
-}
-
 bool Ctcpserver::select() {
   struct timeval timeout;
   timeout.tv_sec = 10;
@@ -114,13 +100,13 @@ bool Ctcpserver::select() {
         std::cerr << "accept() failed\n";
         continue;
       }
-      print_info("accept", eventfd);
+      std::cout << "accept: " << eventfd << std::endl;
       FD_SET(clientsock, &readfds);
       if (maxfd < clientsock) maxfd = clientsock;
       continue;
     }
     if (!recv(eventfd, buffer, 1024)) {
-      print_info("disconnected", eventfd);
+      std::cout << "disconnected: " << eventfd << std::endl;
       ::close(eventfd);
       FD_CLR(eventfd, &readfds);
       if (eventfd == maxfd) {
@@ -133,7 +119,7 @@ bool Ctcpserver::select() {
       }
       continue;
     }
-    print_info("recv", eventfd, buffer);
+    std::cout << "recv from " << eventfd << ": " << buffer << std::endl;
     buffer = "ok";
     send(eventfd, buffer);
   }
@@ -153,18 +139,24 @@ bool Ctcpserver::epoll() {
 
   for (int i = 0; i < fds; i++) {
     if (evs[i].events & EPOLLRDHUP) {
-      print_info("disconnected", evs[i].data.fd);
+      std::cout << "disconnected: " << evs[i].data.fd << std::endl;
       ::close(evs[i].data.fd);
       continue;
     }
     if (evs[i].events & (EPOLLIN | EPOLLPRI)) {  // 接收缓冲区有数据可以读
       if (evs[i].data.fd == listenfd) {
-        int clientfd = accept();
+        sockaddr_in peeraddr;
+        socklen_t len = sizeof(peeraddr);
+        int clientfd =
+            ::accept4(listenfd, (sockaddr *)&peeraddr, &len, SOCK_NONBLOCK);
+        InetAddress clientaddr(peeraddr);
         if (clientfd < 0) {
           std::cerr << "accept() failed\n";
           continue;
         }
-        print_info("accept", clientfd);
+        std::cout << "accept client(fd=" << clientfd
+                  << ",ip=" << clientaddr.ip() << ",port=" << clientaddr.port()
+                  << ")" << std::endl;
         ev.data.fd = clientfd;
         ev.events = EPOLLIN | EPOLLET;
         epoll_ctl(epollfd, EPOLL_CTL_ADD, clientfd, &ev);
@@ -174,7 +166,8 @@ bool Ctcpserver::epoll() {
           bzero(&buffer, sizeof(buffer));
           ssize_t nread = read(evs[i].data.fd, buffer, sizeof(buffer));
           if (nread > 0) {
-            print_info("recv", evs[i].data.fd, buffer);
+            std::cout << "recv from " << evs[i].data.fd << ": " << buffer
+                      << std::endl;
             ::send(evs[i].data.fd, buffer, strlen(buffer), 0);
             continue;
           }
@@ -182,7 +175,7 @@ bool Ctcpserver::epoll() {
           if (nread == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
             break;
           if (nread == 0) {
-            print_info("disconnected", evs[i].data.fd);
+            std::cout << "disconnected: " << evs[i].data.fd << std::endl;
             break;
           }
         }
@@ -190,7 +183,7 @@ bool Ctcpserver::epoll() {
       continue;
     }
     if (evs[i].events & EPOLLOUT) continue;
-    print_info("error", evs[i].data.fd);
+    std::cerr << "error " << evs[i].data.fd << '\n';
     ::close(evs[i].data.fd);
   }
   return true;

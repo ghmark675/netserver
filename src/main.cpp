@@ -5,7 +5,7 @@
 
 void print_tutorial() {
   std::cerr << "client: ./main -c 127.0.0.1 5005\n";
-  std::cerr << "server: ./main -s 5005\n";
+  std::cerr << "server: ./main -s <ip_addr> <port>\n";
 }
 
 void client(const std::string &ip, const unsigned short port);
