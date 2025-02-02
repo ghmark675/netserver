@@ -5,6 +5,7 @@
 #include "../include/Channel.h"
 #include "../include/Ctcpclient.h"
 #include "../include/Epoll.h"
+#include "../include/EventLoop.h"
 #include "../include/Socket.h"
 
 void print_tutorial() {
@@ -77,16 +78,12 @@ void server(const unsigned short port) {
   servsock.bind(servaddr);
   servsock.listen();
 
-  Epoll ep;
-  Channel *servchannel = new Channel(&ep, servsock.fd());
+  EventLoop loop;
+  // Epoll ep;
+  Channel *servchannel = new Channel(loop.ep(), servsock.fd());
   servchannel->set_readcallback(
       std::bind(&Channel::newconnection, servchannel, &servsock));
   servchannel->enable_reading();
 
-  while (true) {
-    std::vector<Channel *> channels = ep.loop();
-    for (auto &ch : channels) {
-      ch->handle_event();
-    }
-  }
+  loop.run();
 }
