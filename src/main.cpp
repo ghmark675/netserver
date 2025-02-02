@@ -44,25 +44,22 @@ void client(const std::string &ip, const unsigned short port) {
     std::cerr << "connect error()\n";
     return;
   }
+  std::cout << "connect ok!" << std::endl;
 
-  for (int i = 0; i < 10; i++) {
-    std::string buffer = "pid=" + std::to_string(getpid()) + ", num=";
-    buffer += std::to_string(i);
+  std::string buffer;
+  for (int i = 0; i < 200000; i++) {
+    std::cout << "input: ";
+    std::cout.flush();
+    std::cin >> buffer;
     if (!client.send(buffer)) {
-      std::cerr << "send " << buffer << " error\n";
+      std::cerr << "send() failed\n";
       return;
     }
-    std::cout << "send: " << buffer << std::endl;
-    if (!client.recv(buffer, 2)) {
-      std::cerr << "recv " << i << " error" << "\n";
+    if (!client.recv(buffer, 1024)) {
+      std::cerr << "recv() failed\n";
       return;
     }
-    if (buffer != "ok") {
-      std::cerr << "don't recv ok\n";
-      return;
-    }
-    std::cout << "received: " << buffer << std::endl;
-    sleep(1);
+    std::cout << "recv: " << buffer << std::endl;
   }
 }
 
@@ -73,10 +70,9 @@ void server(const unsigned short port) {
     return;
   }
 
+  std::cout << "server init done!" << std::endl;
+
   while (true) {
-    if (!server.select()) {
-      std::cerr << "select() error\n";
-      continue;
-    }
+    server.epoll();
   }
 }
