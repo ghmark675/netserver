@@ -15,12 +15,16 @@ int createnonblocking();
 class Socket {
  private:
   const int fd_;
+  std::string ip_;
+  uint16_t port_;
 
  public:
   Socket(int fd);
   ~Socket();
 
   int fd() const;
+  std::string ip() const;
+  uint16_t port() const;
   void setreuseaddr(bool on);  // 设置SO_REUSEADDR选项，true-打开，false-关闭。
   void setreuseport(bool on);              // 设置SO_REUSEPORT选项。
   void settcpnodelay(bool on);             // 设置TCP_NODELAY选项。

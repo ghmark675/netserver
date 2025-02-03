@@ -2,8 +2,6 @@
 
 #include <arpa/inet.h>
 
-#include <iostream>
-
 Ctcpclient::Ctcpclient() : sock(-1) {}
 
 bool Ctcpclient::send(const std::string &buffer) {
@@ -19,7 +17,6 @@ bool Ctcpclient::connect(const std::string &_ip, const unsigned short _port) {
   port = _port;
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) return false;
-  std::cerr << "socket ok!\n";
 
   struct sockaddr_in servaddr;
   memset(&servaddr, 0, sizeof(servaddr));
@@ -32,7 +29,6 @@ bool Ctcpclient::connect(const std::string &_ip, const unsigned short _port) {
     sock = -1;
     return false;
   }
-  std::cerr << "connect ok!\n";
 
   return true;
 }

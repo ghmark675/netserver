@@ -2,10 +2,8 @@
 
 #include <iostream>
 
-#include "../include/Channel.h"
 #include "../include/Ctcpclient.h"
-#include "../include/Epoll.h"
-#include "../include/Socket.h"
+#include "../include/TcpServer.h"
 
 void print_tutorial() {
   std::cerr << "client: ./main -c 127.0.0.1 5005\n";
@@ -68,23 +66,7 @@ void client(const std::string &ip, const unsigned short port) {
 }
 
 void server(const unsigned short port) {
-  Socket servsock(createnonblocking());
-  InetAddress servaddr(port);
-  servsock.setreuseport(true);
-  servsock.settcpnodelay(true);
-  servsock.setkeepalive(true);
-  servsock.setreuseport(true);
-  servsock.bind(servaddr);
-  servsock.listen();
+  TcpServer tcpserver(port);
 
-  Epoll ep;
-  Channel *servchannel = new Channel(&ep, servsock.fd(), true);
-  servchannel->enable_reading();
-
-  while (true) {
-    std::vector<Channel *> channels = ep.loop();
-    for (auto &ch : channels) {
-      ch->handle_event(&servsock);
-    }
-  }
+  tcpserver.start();
 }
