@@ -1,0 +1,18 @@
+#ifndef CONNECTION_H
+#define CONNECTION_H
+
+#include "Channel.h"
+#include "EventLoop.h"
+#include "Socket.h"
+class Connection {
+ private:
+  EventLoop *loop_;
+  Socket *clientsock_;
+  Channel *clientchannel_;
+
+ public:
+  Connection(EventLoop *loop, Socket *clientsock);
+  ~Connection();
+};
+
+#endif

@@ -40,17 +40,15 @@ void Channel::handle_event() {
   ::close(fd_);
 }
 
+#include "../include/Connection.h"
+
 void Channel::newconnection(Socket *servsock) {
   InetAddress clientaddr;
   Socket *clientsock = new Socket(servsock->accept(clientaddr));
   std::cout << "accept client(fd=" << clientsock->fd()
             << ",ip=" << clientaddr.ip() << ",port=" << clientaddr.port() << ")"
             << std::endl;
-  Channel *clientchannel = new Channel(loop_, clientsock->fd());
-  clientchannel->set_readcallback(
-      std::bind(&Channel::onmessage, clientchannel));
-  clientchannel->useet();
-  clientchannel->enable_reading();
+  Connection *conn = new Connection(loop_, clientsock);
 }
 void Channel::onmessage() {
   char buffer[1024];
