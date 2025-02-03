@@ -13,6 +13,7 @@ class EventLoop {
 
   void run();
   Epoll *ep();
+  void update_channel(Channel *ch);
 };
 
 #endif
