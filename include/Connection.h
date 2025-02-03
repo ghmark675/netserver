@@ -9,6 +9,8 @@ class Connection {
   EventLoop *loop_;
   Socket *clientsock_;
   Channel *clientchannel_;
+  std::function<void(Connection *)> closecallback_;
+  std::function<void(Connection *)> errorcallback_;
 
  public:
   Connection(EventLoop *loop, Socket *clientsock);
@@ -20,6 +22,9 @@ class Connection {
 
   void close_callback();
   void error_callback();
+
+  void set_closecallback(std::function<void(Connection *)> fn);
+  void set_errorcallback(std::function<void(Connection *)> fn);
 };
 
 #endif

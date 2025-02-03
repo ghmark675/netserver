@@ -21,6 +21,8 @@ class TcpServer {
 
   void start();
   void newconnection(Socket *clientsock);
+  void closeconnection(Connection *conn);
+  void errorconnection(Connection *conn);
 };
 
 #endif

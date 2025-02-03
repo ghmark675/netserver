@@ -24,11 +24,13 @@ std::string Connection::ip() const { return clientsock_->ip(); }
 
 uint16_t Connection::port() const { return clientsock_->port(); }
 
-void Connection::close_callback() {
-  std::cout << "disconnected: " << fd() << std::endl;
-  ::close(fd());
+void Connection::close_callback() { closecallback_(this); }
+
+void Connection::error_callback() { errorcallback_(this); }
+
+void Connection::set_closecallback(std::function<void(Connection *)> fn) {
+  closecallback_ = fn;
 }
-void Connection::error_callback() {
-  std::cerr << "error " << fd() << '\n';
-  ::close(fd());
+void Connection::set_errorcallback(std::function<void(Connection *)> fn) {
+  errorcallback_ = fn;
 }
