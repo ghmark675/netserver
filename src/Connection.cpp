@@ -13,3 +13,9 @@ Connection::~Connection() {
   delete clientchannel_;
   delete clientsock_;
 }
+
+int Connection::fd() const { return clientsock_->fd(); }
+
+std::string Connection::ip() const { return clientsock_->ip(); }
+
+uint16_t Connection::port() const { return clientsock_->port(); }

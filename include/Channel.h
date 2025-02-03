@@ -2,7 +2,9 @@
 #define CHANNEL_H
 
 #include <sys/epoll.h>
+#include <sys/socket.h>
 
+#include <cstring>
 #include <functional>
 
 #include "EventLoop.h"

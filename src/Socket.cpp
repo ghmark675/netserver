@@ -23,6 +23,10 @@ int Socket::fd() const  // 返回fd_成员。
   return fd_;
 }
 
+std::string Socket::ip() const { return ip_; }
+
+uint16_t Socket::port() const { return port_; }
+
 void Socket::settcpnodelay(bool on) {
   int optval = on ? 1 : 0;
   // TCP_NODELAY包含头文件 <netinet/tcp.h>
@@ -50,6 +54,9 @@ void Socket::bind(const InetAddress& servaddr) {
     close(fd_);
     exit(-1);
   }
+
+  ip_ = servaddr.ip();
+  port_ = servaddr.port();
 }
 
 void Socket::listen(int nn) {
@@ -67,6 +74,8 @@ int Socket::accept(InetAddress& clientaddr) {
   int clientfd = accept4(fd_, (sockaddr*)&peeraddr, &len, SOCK_NONBLOCK);
 
   clientaddr.setaddr(peeraddr);  // 客户端的地址和协议。
+  ip_ = clientaddr.ip();
+  port_ = clientaddr.port();
 
   return clientfd;
 }

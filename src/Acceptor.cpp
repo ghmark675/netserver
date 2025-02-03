@@ -23,8 +23,9 @@ Acceptor::~Acceptor() {
 void Acceptor::newconnection() {
   InetAddress clientaddr;
   Socket *clientsock = new Socket(servsock_->accept(clientaddr));
-  std::cout << "accept client(fd=" << clientsock->fd()
-            << ",ip=" << clientaddr.ip() << ",port=" << clientaddr.port() << ")"
-            << std::endl;
-  Connection *conn = new Connection(loop_, clientsock);
+  newconnectioncb_(clientsock);
+}
+
+void Acceptor::set_newconnectioncb(std::function<void(Socket *)> fn) {
+  newconnectioncb_ = fn;
 }

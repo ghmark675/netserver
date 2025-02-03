@@ -1,8 +1,5 @@
 #include "../include/Channel.h"
 
-#include "../include/InetAddress.h"
-#include "../include/Socket.h"
-
 Channel::Channel(EventLoop *loop, int fd) : fd_(fd), loop_(loop) {}
 Channel::~Channel() {}
 
@@ -26,7 +23,7 @@ uint32_t Channel::events() { return events_; }
 uint32_t Channel::revents() { return revents_; }
 
 void Channel::handle_event() {
-  if (revents() & EPOLLRDHUP) {
+  if (revents_ & EPOLLRDHUP) {
     std::cout << "disconnected: " << fd_ << std::endl;
     ::close(fd_);
     return;
