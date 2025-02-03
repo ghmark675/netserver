@@ -40,16 +40,6 @@ void Channel::handle_event() {
   ::close(fd_);
 }
 
-#include "../include/Connection.h"
-
-void Channel::newconnection(Socket *servsock) {
-  InetAddress clientaddr;
-  Socket *clientsock = new Socket(servsock->accept(clientaddr));
-  std::cout << "accept client(fd=" << clientsock->fd()
-            << ",ip=" << clientaddr.ip() << ",port=" << clientaddr.port() << ")"
-            << std::endl;
-  Connection *conn = new Connection(loop_, clientsock);
-}
 void Channel::onmessage() {
   char buffer[1024];
   while (true) {

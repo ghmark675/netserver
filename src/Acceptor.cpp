@@ -11,12 +11,20 @@ Acceptor::Acceptor(EventLoop *loop, uint16_t port) : loop_(loop) {
   servsock_->listen();
 
   acceptchannel_ = new Channel(loop_, servsock_->fd());
-  acceptchannel_->set_readcallback(
-      std::bind(&Channel::newconnection, acceptchannel_, servsock_));
+  acceptchannel_->set_readcallback(std::bind(&Acceptor::newconnection, this));
   acceptchannel_->enable_reading();
 }
 
 Acceptor::~Acceptor() {
   delete servsock_;
   delete acceptchannel_;
+}
+
+void Acceptor::newconnection() {
+  InetAddress clientaddr;
+  Socket *clientsock = new Socket(servsock_->accept(clientaddr));
+  std::cout << "accept client(fd=" << clientsock->fd()
+            << ",ip=" << clientaddr.ip() << ",port=" << clientaddr.port() << ")"
+            << std::endl;
+  Connection *conn = new Connection(loop_, clientsock);
 }

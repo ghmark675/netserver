@@ -34,7 +34,6 @@ class Channel {
 
   void handle_event();
 
-  void newconnection(Socket *servsock);
   void onmessage();
   void set_readcallback(std::function<void()> fn);
 };
