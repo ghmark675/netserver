@@ -20,6 +20,8 @@ class Channel {
   uint32_t events_ = 0;
   uint32_t revents_ = 0;
   std::function<void()> readcallback_;
+  std::function<void()> closecallback_;
+  std::function<void()> errorcallback_;
 
  public:
   Channel(EventLoop *loop, int fd);
@@ -38,6 +40,8 @@ class Channel {
 
   void onmessage();
   void set_readcallback(std::function<void()> fn);
+  void set_closecallback(std::function<void()> fn);
+  void set_errorcallback(std::function<void()> fn);
 };
 
 #endif

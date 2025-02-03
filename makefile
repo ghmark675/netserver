@@ -31,6 +31,8 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 # 快捷目标：启动服务器
 server: all
+	@make clean
+	@make
 	@echo "Starting server on port 5005..."
 	@./bin/app -s 5005
 

@@ -17,6 +17,9 @@ class Connection {
   int fd() const;
   std::string ip() const;
   uint16_t port() const;
+
+  void close_callback();
+  void error_callback();
 };
 
 #endif

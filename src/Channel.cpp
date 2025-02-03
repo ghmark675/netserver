@@ -24,8 +24,7 @@ uint32_t Channel::revents() { return revents_; }
 
 void Channel::handle_event() {
   if (revents_ & EPOLLRDHUP) {
-    std::cout << "disconnected: " << fd_ << std::endl;
-    ::close(fd_);
+    closecallback_();
     return;
   }
   if (revents_ & (EPOLLIN | EPOLLPRI)) {  // 接收缓冲区有数据可以读
@@ -33,8 +32,7 @@ void Channel::handle_event() {
     return;
   }
   if (revents_ & EPOLLOUT) return;
-  std::cerr << "error " << fd_ << '\n';
-  ::close(fd_);
+  errorcallback_();
 }
 
 void Channel::onmessage() {
@@ -50,11 +48,16 @@ void Channel::onmessage() {
     if (nread == -1 && errno == EINTR) continue;
     if (nread == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) break;
     if (nread == 0) {
-      std::cout << "disconnected: " << fd_ << std::endl;
-      ::close(fd_);
+      closecallback_();
       break;
     }
   }
 }
 
 void Channel::set_readcallback(std::function<void()> fn) { readcallback_ = fn; }
+void Channel::set_closecallback(std::function<void()> fn) {
+  closecallback_ = fn;
+}
+void Channel::set_errorcallback(std::function<void()> fn) {
+  errorcallback_ = fn;
+}
